@@ -49,11 +49,6 @@ class RNN(tnn.Module):
         self._layer_normalization = layer_normalization
         self.device = device
 
-        # UQ edit: fix random seed
-        #-------------------------
-        #torch.manual_seed(0)
-        #-------------------------
-
         self._embedding = tnn.Embedding(voc_size, self._embedding_layer_size)
 
         rnn = getattr(tnn, self._cell_type.upper(), None)
@@ -102,9 +97,9 @@ class RNN(tnn.Module):
             else:
                 raise ValueError(f'Invalid cell type "{self._cell_type}"')
 
-        # print(input_vector)
         embedded_data = self._embedding(input_vector)  # (batch,seq,embedding)
         output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+
         if self._layer_normalization:
             output_vector = tnnf.layer_norm(output_vector, output_vector.size()[1:])
 

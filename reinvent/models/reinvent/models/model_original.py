@@ -61,13 +61,6 @@ class Model:
             network_params = {}
 
         self._model_modes = ModelModeEnum()
-        
-        # UQ modification, turn on dropout
-        #----------------
-        # network_params['dropout'] = 0.1
-        # mode = 'training'
-        #----------------
-        
         self.network = rnn.RNN(len(self.vocabulary), **network_params, device=self.device)
         self.set_mode(mode)
 
@@ -83,7 +76,6 @@ class Model:
 
         if mode == self._model_modes.TRAINING:
             self.network.train()
-            print('TRAINING MODE')
         elif mode == self._model_modes.INFERENCE:
             self.network.eval()
         else:
@@ -171,7 +163,6 @@ class Model:
 
     @torch.no_grad()
     def sample(self, batch_size: int = 128) -> Tuple[torch.Tensor, list, torch.Tensor]:
-
         seqs, likelihoods = self._sample(batch_size=batch_size)
 
         # FIXME: this is potentially unnecessary in some cases
@@ -208,10 +199,7 @@ class Model:
             logits = logits.squeeze(1)  # 2D
             log_probs = logits.log_softmax(dim=1)  # 2D
             probabilities = logits.softmax(dim=1)  # 2D
-
-            # input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
-            # UQ EDIT: this will turn the output sampling deterministic
-            input_vector = probabilities.argmax(dim=1).view(-1)
+            input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
             sequences.append(input_vector.view(-1, 1))
             nlls += self._nll_loss(log_probs, input_vector)
 
@@ -230,4 +218,3 @@ class Model:
         """
 
         return self.network.parameters()
-                   
