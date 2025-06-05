@@ -209,9 +209,9 @@ class Model:
             log_probs = logits.log_softmax(dim=1)  # 2D
             probabilities = logits.softmax(dim=1)  # 2D
 
-            # input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
+            input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
             # UQ EDIT: this will turn the output sampling deterministic
-            input_vector = probabilities.argmax(dim=1).view(-1)
+            # input_vector = probabilities.argmax(dim=1).view(-1)
             sequences.append(input_vector.view(-1, 1))
             nlls += self._nll_loss(log_probs, input_vector)
 
