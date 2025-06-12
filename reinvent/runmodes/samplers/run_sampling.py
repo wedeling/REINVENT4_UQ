@@ -57,7 +57,13 @@ def run_sampling(
     smiles_output_filename = parameters.output_file
 
     agent_model_filename = parameters.model_file
-    adapter, _, model_type = create_adapter(agent_model_filename, "inference", device)
+
+    ######### UQ edit
+    # mode is either 'training' or 'inference'. For dropout use 'training'
+    mode = input_config['parameters']['mode']
+    logger.info(f'UQ: Setting mode to {mode}.')
+    adapter, _, model_type = create_adapter(agent_model_filename, mode, device)
+    ######### end UQ edit
 
     logger.info(f"Using generator {model_type}")
     logger.info(f"Writing sampled SMILES to CSV file {smiles_output_filename}")
@@ -68,6 +74,16 @@ def run_sampling(
     params["batch_size"] = parameters.num_smiles
     sampler, batch_size = setup_sampler(model_type, params, adapter)
     sampler.unique_sequences = False
+
+    ######### UQ edit
+    # set the dropout probability
+    dropout_prob = input_config['parameters']['dropout_prob']
+    sampler.model.model.network._rnn.dropout = dropout_prob
+    logger.info(f'UQ: Setting dropout probability to {dropout_prob}')
+
+    sampling_mode = input_config['parameters']['sampling_mode']
+    sampler.model.model.set_sampling_mode(sampling_mode)
+    ######### end UQ edit
 
     try:
         smiles_input_filename = parameters.smiles_file
@@ -88,7 +104,7 @@ def run_sampling(
     # NOTE: for beamsearch the batch size determines the beam size
     if model_type == "Mol2Mol" and parameters.sample_strategy == "beamsearch":
         if parameters.num_smiles > 300:
-            logger.warning(f"Sampling with beam search may be very slow")
+            logger.warning("Sampling with beam search may be very slow")
 
     if callable(write_config):
         write_config(config.model_dump())

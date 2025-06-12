@@ -38,7 +38,12 @@ model_file = "priors/reinvent.prior"
 
 output_file = 'sampling.csv'  # sampled SMILES and NLL in CSV format
 
-num_smiles = 1  # number of SMILES to be sampled, 1 per input SMILES
-unique_molecules = true  # if true remove all duplicatesd canonicalize smiles
+num_smiles = 1000  # number of SMILES to be sampled, 1 per input SMILES
+unique_molecules = true  # if true remove all duplicate canonicalize smiles
 #randomize_smiles = true # if true shuffle atoms in SMILES randomly
 randomize_smiles = false # if true shuffle atoms in SMILES randomly
+
+# UQ parameters
+dropout_prob = 0.1
+mode = 'training' # either training (dropout active) or inference (dropout inactive)
+sampling_mode = 'max' # either max (deterministic softmax sampling) or random softmax sampling

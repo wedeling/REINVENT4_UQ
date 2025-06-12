@@ -61,13 +61,13 @@ class Model:
             network_params = {}
 
         self._model_modes = ModelModeEnum()
-        
+
         # UQ modification, turn on dropout
         #----------------
         # network_params['dropout'] = 0.1
         # mode = 'training'
         #----------------
-        
+
         self.network = rnn.RNN(len(self.vocabulary), **network_params, device=self.device)
         self.set_mode(mode)
 
@@ -80,14 +80,15 @@ class Model:
         :param mode: Mode to be set.
         :raises ValueError: raised when unknown mode
         """
-
         if mode == self._model_modes.TRAINING:
             self.network.train()
-            print('TRAINING MODE')
         elif mode == self._model_modes.INFERENCE:
             self.network.eval()
         else:
             raise ValueError(f"Invalid model mode '{mode}")
+
+    def set_sampling_mode(self, sampling_mode):
+        self.sampling_mode = sampling_mode
 
     @classmethod
     def create_from_dict(cls: type[M], save_dict: dict, mode: str, device: torch.device) -> M:
@@ -209,9 +210,13 @@ class Model:
             log_probs = logits.log_softmax(dim=1)  # 2D
             probabilities = logits.softmax(dim=1)  # 2D
 
-            input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
-            # UQ EDIT: this will turn the output sampling deterministic
-            # input_vector = probabilities.argmax(dim=1).view(-1)
+            if self.sampling_mode == 'random':
+                input_vector = torch.multinomial(probabilities, num_samples=1).view(-1)  # 1D
+            elif self.sampling_mode == 'max': 
+                input_vector = probabilities.argmax(dim=1).view(-1)
+            else:
+                raise ValueError(f"Invalid sampling mode: {self.sampling_mode}")
+ 
             sequences.append(input_vector.view(-1, 1))
             nlls += self._nll_loss(log_probs, input_vector)
 
