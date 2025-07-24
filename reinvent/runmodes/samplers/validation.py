@@ -16,10 +16,7 @@ class SectionParameters(GlobalConfig):
     unique_molecules: bool = True
     randomize_smiles: bool = True
     temperature: float = 1.0
-    # UQ edit:
-    dropout_prob: float = 0.0
-    mode: str = 'training'
-    sampling_mode: str = 'random'
+
 
 class SectionResponder(GlobalConfig):
     endpoint: str

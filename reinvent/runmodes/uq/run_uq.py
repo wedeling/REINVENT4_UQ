@@ -1,0 +1,224 @@
+"""
+Sample Reinvent with UQ
+"""
+
+__all__ = ["run_uq"]
+import logging
+
+from torch.utils.tensorboard import SummaryWriter
+import numpy as np
+import torch
+
+from reinvent.runmodes import create_adapter
+from reinvent.runmodes.samplers.reports import (
+    SamplingTBReporter,
+    SamplingRemoteReporter,
+)
+from reinvent.utils import get_reporter, read_smiles_csv_file
+from reinvent.runmodes.setup_sampler import setup_sampler
+from reinvent.models.model_factory.sample_batch import SampleBatch, SmilesState
+# from reinvent.chemistry import conversions
+# from reinvent_plugins.normalizers.rdkit_smiles import normalize
+from .validation import SamplingConfig
+
+logger = logging.getLogger(__name__)
+
+HEADERS = {
+    "Reinvent_UQ": ("SMILES_RNN", "SMILES_CANONICAL", "STATE", "NLL"),
+    # "Libinvent": ("SMILES", "Scaffold", "R-groups", "NLL"),
+    # "Linkinvent": ("SMILES", "Warheads", "Linker", "NLL"),
+    # "LibinventTransformer": ("SMILES", "Scaffold", "R-groups", "NLL"),
+    # "LinkinventTransformer": ("SMILES", "Warheads", "Linker", "NLL"),
+    # "Mol2Mol": ("SMILES", "Input_SMILES", "Tanimoto", "NLL"),
+    # "Pepinvent": ("SMILES", "Masked_input_peptide", "Fillers", "NLL"),
+}
+
+# FRAGMENT_GENERATORS = [
+#     "Libinvent",
+#     "Linkinvent",
+#     "LinkinventTransformer",
+#     "LibinventTransformer",
+#     "Pepinvent",
+# ]
+
+
+def run_uq(
+    input_config: dict, device, tb_logdir: str, write_config: str = None, *args, **kwargs):
+    """UQ run setup"""
+
+    logger.info("Starting UQ Sampling")
+
+    config = SamplingConfig(**input_config)
+    parameters = config.parameters
+    smiles_output_filename = parameters.output_file
+
+    agent_model_filename = parameters.model_file
+
+    # mode is either 'training' or 'inference'. For dropout use 'training'
+    mode = input_config['parameters']['mode']
+    logger.info(f'UQ: Setting mode to {mode}.')
+    adapter, _, model_type = create_adapter(agent_model_filename, mode, device)
+
+    logger.info(f"Using generator {model_type}")
+    logger.info(f"Writing sampled SMILES to CSV file {smiles_output_filename}")
+
+    # number of smiles to be generated for each input; consistent with batch_size parameter as used in RL
+    # different from batch size used in dataloader which affect cuda memory
+    params = parameters.dict()
+    params["batch_size"] = parameters.num_smiles
+    sampler, batch_size = setup_sampler(model_type, params, adapter)
+    sampler.unique_sequences = False
+
+    # set the dropout probability
+    dropout_prob = input_config['parameters']['dropout_prob']
+    sampler.model.model.network._rnn.dropout = dropout_prob
+    logger.info(f'UQ: Setting dropout probability to {dropout_prob}')
+
+    # set the sampling mode, 'random' or 'max'
+    sampling_mode = input_config['parameters']['sampling_mode']
+    sampler.model.model.set_sampling_mode(sampling_mode)
+
+    # number of samples to draw per input smiles
+    n_samples = input_config['parameters']['num_samples']
+    # length of the input smiles if these are generated randomly
+    input_length = input_config['parameters']['input_length']
+
+    # we can also read input smiles from a file
+    try:
+        smiles_input_filename = parameters.smiles_file
+    except KeyError:
+        smiles_input_filename = None
+
+    # this will read the (partial) input smiles from a file
+    input_smilies = None
+    # num_input_smilies = 1
+
+    if smiles_input_filename:
+        input_smilies = read_smiles_csv_file(smiles_input_filename, columns=0)
+        # num_input_smilies = len(input_smilies)
+        logger.info(f'Reading partial input smiles from {smiles_input_filename}')
+    else:
+        logger.info('Partial input smiles will be generated at random')
+
+    num_total_smilies = parameters.num_smiles * n_samples
+
+    logger.info(f"Sampling {num_total_smilies} SMILES from model {agent_model_filename}")
+
+    # # NOTE: for beamsearch the batch size determines the beam size
+    # if model_type == "Mol2Mol" and parameters.sample_strategy == "beamsearch":
+    #     if parameters.num_smiles > 300:
+    #         logger.warning("Sampling with beam search may be very slow")
+
+    if callable(write_config):
+        write_config(config.model_dump())
+
+    with torch.no_grad():
+        if input_smilies == None:
+            sampled = sampler.sample(n_samples, input_length)
+        else:
+            sampled = sampler.sample(n_samples, input_length, input_smilies=input_smilies)
+
+    # FIXME: remove atom map numbers from SMILES in chemistry code
+    # if model_type == "Libinvent":
+        # sampled.smilies = normalize(sampled.smilies, keep_all=True)
+
+    kwargs = {}
+    # scores = [-1] * len(sampled.items2)
+    # state = np.array(sampled.states)
+
+    # if model_type == "Mol2Mol":
+    #     # compute Tanimoto similarity between generated compounds and input compounds; return largest
+    #     valid_mols, valid_idxs = conversions.smiles_to_mols_and_indices(sampled.items2)
+    #     valid_scores = sampler.calculate_tanimoto(input_smilies, sampled.items2)
+
+    #     for i, j in enumerate(valid_idxs):
+    #         scores[j] = valid_scores[i]
+
+    #     kwargs = {"Tanimoto": scores}
+
+    reporters = setup_reporters(tb_logdir)
+
+    for reporter in reporters:
+        reporter.submit(sampled, **kwargs)
+
+    # Uncomment this to only write VALID smiles
+    # if parameters.unique_molecules:
+    #     sampled = filter_valid(sampled)
+
+    records = None
+    nlls = [round(nll, 2) for nll in sampled.nlls.cpu().tolist()]
+
+    if model_type == "Reinvent_UQ":
+        records = zip(sampled.items2, sampled.smilies, sampled.states, nlls)
+    # elif model_type in FRAGMENT_GENERATORS:
+    #     records = zip(sampled.smilies, sampled.items1, sampled.items2, nlls)
+    # elif model_type == "Mol2Mol":
+    #     if parameters.unique_molecules:
+    #         mask_idx = np.nonzero(state == SmilesState.VALID)[0]
+    #         scores = [scores[i] for i in mask_idx]
+    #     records = zip(sampled.smilies, sampled.items1, scores, nlls)
+
+    #     if parameters.target_smiles_path:
+    #         target_smilies = read_smiles_csv_file(parameters.target_smiles_path, columns=0)
+
+    #         if len(target_smilies) > 0:
+    #             input, target, tanimoto, nlls = sampler.check_nll(input_smilies, target_smilies)
+
+    #             with open(parameters.target_nll_file, "w") as fh:
+    #                 write_csv(fh, HEADERS[model_type], zip(input, target, tanimoto, nlls))
+
+    with open(smiles_output_filename, "w") as fh:
+        write_csv(fh, HEADERS[model_type], records)
+
+
+def filter_valid(sampled: SampleBatch) -> SampleBatch:
+    """Filter out valid SMILES and associated data, which is unique as well
+
+    :param sampled:
+    :return:
+    """
+
+    state = np.array(sampled.states)
+    mask_idx = state == SmilesState.VALID
+
+    # For Reinvent, items1 is None
+    items1 = list(np.array(sampled.items1)[mask_idx]) if sampled.items1 else None
+    items2 = list(np.array(sampled.items2)[mask_idx])
+
+    nlls = sampled.nlls[mask_idx]
+
+    smilies = list(np.array(sampled.smilies)[mask_idx])
+    states = sampled.states[mask_idx]
+
+    return SampleBatch(items1, items2, nlls, smilies, states)
+
+
+def write_csv(fh, headers, records):
+    fh.write(",".join(headers) + "\n")
+
+    for items in records:
+        line = ",".join([str(item) for item in items])
+        fh.write(f"{line}\n")
+
+
+def setup_reporters(tb_logdir):
+    """Set up reporters
+
+    Choices: CSV (SMILES), TensorBoard, remote
+    """
+
+    reporters = []
+    remote_reporter = get_reporter()
+    tb_reporter = None
+
+    if tb_logdir:
+        tb_reporter = SummaryWriter(log_dir=tb_logdir)
+
+    for kls, reporter in (SamplingTBReporter, tb_reporter), (
+        SamplingRemoteReporter,
+        remote_reporter,
+    ):
+        if reporter:
+            reporters.append(kls(reporter))
+
+    return reporters

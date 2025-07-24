@@ -1,0 +1,3 @@
+12:48:59 <INFO> Started REINVENT 4.5.11 (C) AstraZeneca 2017, 2023 on 2025-06-27
+12:48:59 <INFO> Command line: /home/wouter/reinvent4/bin/reinvent -l uq.log ./configs/toml/uq.toml
+12:48:59 <INFO> Reading run configuration from /home/wouter/VECMA/Python/REINVENT4/REINVENT4_UQ/reinvent/models/reinvent/models/configs/toml/uq.toml using format toml

@@ -57,7 +57,6 @@ def create_model(
     :param metadata: metadata for the model file
     :returns: a new Reinvent model
     """
-
     network_params = {
         "dropout": dropout,
         "layer_size": layer_size,

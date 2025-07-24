@@ -6,3 +6,4 @@ from .libinvent import *
 from .linkinvent import *
 from .mol2mol import *
 from .pepinvent import *
+from .reinvent_uq import *

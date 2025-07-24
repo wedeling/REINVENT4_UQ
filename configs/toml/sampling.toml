@@ -3,7 +3,7 @@
 
 
 run_type = "sampling"
-device = "cuda:0"  # set torch device e.g. "cpu"
+device = "cpu"  # set torch device e.g. "cpu"
 json_out_config = "_sampling.json"  # write this TOML to JSON
 
 [parameters]
@@ -38,6 +38,6 @@ model_file = "priors/reinvent.prior"
 
 output_file = 'sampling.csv'  # sampled SMILES and NLL in CSV format
 
-num_smiles = 157  # number of SMILES to be sampled, 1 per input SMILES
+num_smiles = 1  # number of SMILES to be sampled, 1 per input SMILES
 unique_molecules = true  # if true remove all duplicatesd canonicalize smiles
-randomize_smiles = true # if true shuffle atoms in SMILES randomly
+randomize_smiles = false # if true shuffle atoms in SMILES randomly

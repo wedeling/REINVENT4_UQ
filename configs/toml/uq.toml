@@ -1,8 +1,7 @@
-# REINVENT4 TOML input example for sampling
+# REINVENT4 TOML UQ input file
 #
 
-
-run_type = "sampling"
+run_type = "uq"
 device = "cpu"  # set torch device e.g. "cpu"
 json_out_config = "_sampling.json"  # write this TOML to JSON
 
@@ -12,7 +11,7 @@ json_out_config = "_sampling.json"  # write this TOML to JSON
 # file and possibly a SMILES file with seed structures.
 
 ## Reinvent: de novo sampling
-model_file = "priors/reinvent.prior"
+model_file = "priors/uq.prior"
 
 ## LibInvent: find R-groups for the given scaffolds
 #model_file = "priors/libinvent.prior"
@@ -36,14 +35,16 @@ model_file = "priors/reinvent.prior"
 #temperature = 1.0 # temperature in multinomial sampling
 #tb_logdir = "tb_logs"  # name of the TensorBoard logging directory
 
-output_file = 'sampling.csv'  # sampled SMILES and NLL in CSV format
+smiles_file = "input.smi"  # partial input smiles
+output_file = 'uq.csv'  # sampled SMILES and NLL in CSV format
 
-num_smiles = 1000  # number of SMILES to be sampled, 1 per input SMILES
+num_smiles = 1  # number of SMILES to be sampled
+num_samples = 10000 # number of samples per (partial) input sequence
+input_length = 5 # length of the partial input sequence
 unique_molecules = true  # if true remove all duplicate canonicalize smiles
-#randomize_smiles = true # if true shuffle atoms in SMILES randomly
 randomize_smiles = false # if true shuffle atoms in SMILES randomly
 
-# UQ parameters
-dropout_prob = 0.1
+dropout_prob = 0.0	# (MC) dropout probability
 mode = 'training' # either training (dropout active) or inference (dropout inactive)
-sampling_mode = 'max' # either max (deterministic softmax sampling) or random softmax sampling
+sampling_mode = 'random' # either max (deterministic softmax sampling) or random softmax sampling
+

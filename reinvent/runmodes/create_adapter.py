@@ -29,11 +29,11 @@ def create_adapter(dict_filename: str, mode: str, device: torch.device) -> tuple
 
     dict_filename = resolve_model_filename(dict_filename)
     save_dict = torch.load(dict_filename, map_location="cpu", weights_only=False)
+    print(dict_filename)
     check_metadata(dict_filename, save_dict)
 
     if "model_type" in save_dict:
         model_type = save_dict["model_type"]
-
         # kludge to handle new-style transformers
         if model_type in ["Linkinvent", "Libinvent"] and save_dict.get("version", -1) == 2:
             model_type += "Transformer"
@@ -50,7 +50,6 @@ def create_adapter(dict_filename: str, mode: str, device: torch.device) -> tuple
 
     model = model_class.create_from_dict(save_dict, mode, device)
     adapter = adapter_class(model)
-
     compatibility_setup(model)
 
     network_params = model.network.parameters()

@@ -38,6 +38,7 @@ class RNN(tnn.Module):
         :param device: the PyTorch device
         :raises RuntimeError: if cell_type is invalid
         """
+
         super(RNN, self).__init__()
 
         self._layer_size = layer_size
@@ -98,6 +99,7 @@ class RNN(tnn.Module):
 
         embedded_data = self._embedding(input_vector)  # (batch,seq,embedding)
         output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+
         if self._layer_normalization:
             output_vector = tnnf.layer_norm(output_vector, output_vector.size()[1:])
 

@@ -7,6 +7,7 @@ from .transformer.linkinvent.linkinvent import LinkinventModel as LinkinventTran
 from .transformer.libinvent.libinvent import LibinventModel as LibinventTransformerModel
 from .transformer.mol2mol.mol2mol import Mol2MolModel
 from .transformer.pepinvent.pepinvent import PepinventModel
+from .reinvent.models.model_uq import Model as Reinvent_UQModel
 
 from .model_factory.model_adapter import *
 from .model_factory.reinvent_adapter import *
@@ -15,5 +16,6 @@ from .model_factory.linkinvent_adapter import *
 from .model_factory.mol2mol_adapter import *
 from .model_factory.transformer_adapter import *
 from .model_factory.pepinvent_adapter import *
+from .model_factory.reinvent_uq_adapter import *
 
 from .meta_data import *
