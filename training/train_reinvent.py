@@ -151,7 +151,7 @@ model = create_model(num_layers = num_layers, layer_size = layer_size, dropout =
                      metadata={}, device=device)
 
 # move rnn to device, cpu or gpu
-model.network.to(device)
+# model.network.to(device)
 
 # tokens of the smiles strings
 tokens = model.vocabulary.tokens()
