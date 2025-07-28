@@ -148,7 +148,7 @@ model = create_model(num_layers = num_layers, layer_size = layer_size, dropout =
                      layer_normalization = layer_normalization,
                      standardize = standardize,
                      input_smiles_path = input_smiles_path, output_model_path=output_model_path,
-                     metadata={})
+                     metadata={}, device=device)
 
 # move rnn to device, cpu or gpu
 model.network.to(device)

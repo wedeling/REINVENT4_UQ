@@ -7,6 +7,7 @@ import datetime
 import uuid
 import pprint
 import logging
+import torch
 
 import tomli
 
@@ -37,6 +38,7 @@ def create_model(
     input_smiles_path: str,
     output_model_path: str,
     metadata: dict,
+    device: torch.device,
 ) -> Model:
     """Create a Reinvent model from scratch
 
@@ -94,6 +96,7 @@ def create_model(
         meta_data=metadata,
         network_params=network_params,
         max_sequence_length=max_sequence_length,
+        device=device
     )
 
     model.save(output_model_path)
