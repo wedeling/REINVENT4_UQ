@@ -20,6 +20,7 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 import random
+import string
 
 # to create a pytorch dataset
 from torch.utils.data import Dataset
@@ -138,8 +139,9 @@ input_smiles_path = './data/train_smiles.smi'
 # preprocessed data file
 # input_smiles_path = './data/all_data.smi'
 
-# output pickle file of the network
-output_model_path = './priors/retrained.prior'
+# output pickle file of the network with random string
+random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+output_model_path = f'./priors/reinvent_f{random_string}.prior'
 
 # create a reinvent model
 model = create_model(num_layers = num_layers, layer_size = layer_size, dropout = dropout,
