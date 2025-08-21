@@ -183,8 +183,8 @@ model.network.train()
 # SGD method
 optimizer = torch.optim.Adam(model.network.parameters(), lr=learning_rate)
 # the original reinvent 2017 article mentions a 0.02 learning rate decay
-# this seems like a lot (maybe they mean gamma = 0.98?), will not use it for now.
-# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.02)
+# this seems like a lot (maybe they mean gamma = 0.98?)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.98)
 
 # negative log-likelihood loss function
 criterion = nn.NLLLoss()
@@ -228,13 +228,13 @@ for n in range(n_epoch):
         batch_loss.backward()
         nn.utils.clip_grad_norm_(model.network.parameters(), 3)
         optimizer.step()
-        # scheduler.step()
+        scheduler.step()
         optimizer.zero_grad()
 
         if j % 100 == 0:
-            # lr = optimizer.param_groups[0]['lr']
+            lr = optimizer.param_groups[0]['lr']
             print(f'\n Current batch loss = {batch_loss.item()}')
-            # print(f'\n Learning rate = {lr}')
+            print(f'\n Learning rate = {lr}')
         current_loss += batch_loss.item() / len(batch)
         j += 1
 
